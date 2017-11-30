@@ -4,7 +4,8 @@ import { URL } from 'url';
 import { Response } from '_debugger';
 import { ErrorRequestHandler } from 'express';
 
-const serviceAccount = require("../fcc-backend-firebase-adminsdk-7185u-edd72e9ca4.json");
+const serviceAccount = require("./.data/firestore.json");
+
 const app = express();
 const port = process.env.PORT || 58808;
 
