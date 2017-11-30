@@ -17,60 +17,39 @@ const db = admin.firestore();
 const links = db.collection('fcc-shortener');
 
 app.get('/new/*', (req, res) => {
-  const path = decodeURI(req.path.slice(5));
-  const test = new URL(path);
-  links.where('original_url', '==', test.toString()).get().then((snapshot) => {
-    if (snapshot.empty) {
-      console.log('Snapshot Empty!');
-      const doc = links.add({original_url: test.toString()})
-        .then(ref => ref.set({key: ref.id}, {merge: true}))
-        .then(result => {
-          res.send(result);
-        })
+  const path = new URL(decodeURI(req.path.slice(5)));
+  links.where('original_url', '==', path.toString()).get()
+    .then((snapshot) => {
+      if (snapshot.empty) {
+        const doc = links.doc();
+        doc.set({ original_url: path.toString(), key: doc.id }, { merge: true })
+          .then(result => res.send({ original_url: path.toString(), key: doc.id }));
+      } else {
+        res.send(snapshot.docs[0].data());
+      }
+    });
+});
+
+app.get('/:url', (req, res) => {
+  links.doc(req.params.url).get().then((snapshot) => {
+    if (snapshot.exists) {
+      res.redirect(snapshot.data().original_url);
     } else {
-      const doc = snapshot.docs[0].data();
-      console.log(doc);
-      res.send(doc);
+      res.status(404).send('Shortened URL not found');
     }
   })
 });
 
-app.get('/die', (req, res) => {
-  res.send('Goodbye!');
-  killServer();
-});
-
-app.get('/:url', (req, res) => {
-  res.send({short_url: req.params.url});
+app.get('/', (req, res) => {
+  res.send('Please go to /new/:url: to receive a shortened key, or go to /:key: to navigate to your chosen address.');
 });
 
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.ErrorRequestHandler) => {
   // console.log(err);
-  res.status(500).send({error: 'Oops.'});
+  res.status(500).send({ message: 'Oops, something broke.',  error: err });
 })
 
-// test.set({label:'tester-1'}, {merge: true});
-// test.get().then(x => console.log());
-// let test = testCollection.add({ label: 'first test', text: 'random text!' })
-//   .then((x) => console.log(x))
-//   .catch((x) => console.log(x));
-
-// db.collection('test').get()
-//   .then((snapshot) => {
-//     snapshot.forEach((doc) => {
-//       console.log(doc.id, '=>', doc.data());
-//     });
-//   })
-//   .catch((err) => {
-//     console.log('Error getting documents', err);
-//   });
-
-
 const server = app.listen(port, () => {
-  console.log('Listening on port '+port+'! '+new Date(Date.now()));
+  console.log('Listening on port ' + port + '! ' + new Date(Date.now()));
 });
-
-function killServer() {
-  server.close();
-}
